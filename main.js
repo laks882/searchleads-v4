@@ -44,11 +44,26 @@ const run = async () => {
         const data = Array.isArray(statusRes.data) ? statusRes.data[0] : statusRes.data;
         const status = data?.enrichment_status;
 
+        // Validate that we have valid data
+        if (!data) {
+            console.log('⚠️ Warning: No data received in status response');
+            await sleep(10000);
+            retries++;
+            continue;
+        }
+
         console.log(`Status: ${status} — Attempt ${retries + 1}/${maxRetries}`);
+
+        // Debug: Log the raw response structure for troubleshooting
+        if (retries === 0) {
+            console.log('🔍 Raw status response structure:', JSON.stringify(statusRes.data, null, 2));
+        }
 
         // Check for completion (case insensitive)
         if (status && status.toLowerCase() === 'completed') {
             result = data;
+            console.log('✅ Enrichment completed successfully!');
+            console.log('📊 Complete result data:', JSON.stringify(data, null, 2));
             break;
         }
 
@@ -63,7 +78,19 @@ const run = async () => {
 
     if (!result) throw new Error('Timed out waiting for enrichment result.');
 
+    console.log('💾 Saving final result to OUTPUT...');
+    console.log('🎯 Final enrichment summary:');
+    console.log(`   📊 Status: ${result.enrichment_status}`);
+    console.log(`   📁 File: ${result.file_name}`);
+    console.log(`   📈 Records enriched: ${result.enriched_records}`);
+    console.log(`   💳 Credits used: ${result.credits_involved}`);
+    console.log(`   🔗 Spreadsheet: ${result.spreadsheet_url}`);
+
     await Actor.setValue('OUTPUT', result);
+
+    console.log('🎉 Actor completed successfully!');
+    console.log('📋 You can access the enriched data at the spreadsheet URL above.');
+
     await Actor.exit();
 };
 
